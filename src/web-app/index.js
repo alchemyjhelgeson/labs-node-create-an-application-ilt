@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const logger = require("morgan");
 const path = require("path");
 const { createServer } = require("http");
+const { auth, requiresAuth } = require("express-openid-connect");
 
 
 const {
@@ -38,6 +39,20 @@ app.use(
   })
 );
 
+app.use(
+    auth({
+        authorizationParams: {
+            response_type: 'code',
+        },
+        secret: SESSION_SECRET,
+        auth0Logout: true,
+        baseURL: APP_URL,
+        issuerBaseURL: ISSUER_BASE_URL,
+        clientID: CLIENT_ID,
+        authRequired: false,
+    })
+);
+
 const expenses = [
   {
     date: new Date(),
@@ -61,7 +76,7 @@ app.get("/", async (req, res) => {
 
 // 👇 add requiresAuth middlware to these private routes  👇
 
-app.get("/user", async (req, res) => {
+app.get("/user", requiresAuth(), async (req, res) => {
   res.render("user", {
     user: req.oidc && req.oidc.user,
     id_token: req.oidc && req.oidc.idToken,
@@ -70,7 +85,7 @@ app.get("/user", async (req, res) => {
   });
 });
 
-app.get("/expenses", async (req, res, next) => {
+app.get("/expenses", requiresAuth(), async (req, res, next) => {
   res.render("expenses", {
     user: req.oidc && req.oidc.user,
     expenses,
